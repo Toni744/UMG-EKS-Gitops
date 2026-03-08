@@ -15,14 +15,10 @@ locals {
 
 # ── Remote state backend (generated per module path) ─────────────────────────
 remote_state {
-  backend = "s3"
+  backend = "local"
 
   config = {
-    bucket         = local.state_bucket
-    key            = "${local.env}/eks/terraform.tfstate"
-    region         = local.region
-    encrypt        = true
-    dynamodb_table = local.lock_table
+    path = "${get_parent_terragrunt_dir()}/.terragrunt-cache/${path_relative_to_include()}/terraform.tfstate"
   }
 
   generate = {

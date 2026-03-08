@@ -8,7 +8,7 @@ locals {
 }
 
 terraform {
-  source = "../../../modules/eks"
+  source = "../../modules/eks"
 }
 
 inputs = {
@@ -18,9 +18,9 @@ inputs = {
 
   # Cost-optimized HA setup — cheaper instances, fewer nodes
   instance_types  = ["t3a.small"]
-  desired_size    = 2
-  min_size        = 2
-  max_size        = 4
+  desired_size    = 1
+  min_size        = 1
+  max_size        = 2
 
   single_nat_gateway = true   # Cost savings over per-AZ NAT GWs
 }

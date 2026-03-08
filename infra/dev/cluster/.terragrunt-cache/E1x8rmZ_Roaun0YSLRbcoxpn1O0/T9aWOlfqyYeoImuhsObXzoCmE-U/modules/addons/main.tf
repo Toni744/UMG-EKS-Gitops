@@ -30,6 +30,7 @@ resource "aws_eks_addon" "coredns" {
   cluster_name      = var.cluster_name
   addon_name        = "coredns"
   addon_version     = data.aws_eks_addon_version.coredns.version
+  resolve_conflicts = "OVERWRITE"
 
   tags = var.tags
 }

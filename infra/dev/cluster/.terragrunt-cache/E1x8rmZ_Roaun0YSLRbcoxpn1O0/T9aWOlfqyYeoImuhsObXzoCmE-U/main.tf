@@ -1,0 +1,89 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+locals {
+  common_tags = merge(
+    var.tags,
+    {
+      Environment = var.environment
+      ManagedBy   = "Terragrunt"
+    }
+  )
+}
+
+module "networking" {
+  source = "./modules/networking"
+
+  cluster_name       = var.cluster_name
+  vpc_cidr           = var.vpc_cidr
+  single_nat_gateway = var.single_nat_gateway
+  tags               = local.common_tags
+}
+
+module "iam" {
+  source = "./modules/iam"
+
+  cluster_name = var.cluster_name
+  vpc_id       = module.networking.vpc_id
+  tags         = local.common_tags
+}
+
+module "cluster" {
+  source = "./modules/cluster"
+
+  cluster_name       = var.cluster_name
+  kubernetes_version = var.kubernetes_version
+  role_arn           = module.iam.cluster_role_arn
+  subnet_ids         = concat(module.networking.public_subnet_ids, module.networking.private_subnet_ids)
+  security_group_id  = module.iam.cluster_sg_id
+  tags               = local.common_tags
+}
+
+module "node_group" {
+  source = "./modules/node_group"
+
+  cluster_name      = var.cluster_name
+  node_role_arn     = module.iam.node_role_arn
+  subnet_ids        = module.networking.private_subnet_ids
+  security_group_id = module.iam.node_sg_id
+  instance_types    = var.instance_types
+  desired_size      = var.desired_size
+  min_size          = var.min_size
+  max_size          = var.max_size
+  tags              = local.common_tags
+
+  depends_on = [module.cluster]
+}
+
+module "irsa" {
+  source = "./modules/irsa"
+
+  cluster_name            = var.cluster_name
+  cluster_oidc_issuer_url = module.cluster.cluster_oidc_issuer_url
+  aws_account_id          = data.aws_caller_identity.current.account_id
+  tags                    = local.common_tags
+}
+
+module "addons" {
+  source = "./modules/addons"
+
+  cluster_name       = var.cluster_name
+  node_group_id      = module.node_group.node_group_id
+  kubernetes_version = var.kubernetes_version
+  vpc_cni_role_arn   = module.irsa.vpc_cni_role_arn
+  tags               = local.common_tags
+
+  depends_on = [module.node_group]
+}

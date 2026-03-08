@@ -1,3 +1,6 @@
+include "root" {
+  path = find_in_parent_folders("root.hcl")
+}
 
 locals {
   env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
@@ -11,13 +14,13 @@ terraform {
 inputs = {
   cluster_name   = "automate-cluster-${local.env}"
   environment    = local.env
-  aws_region     = local.env_vars.locals.aws_region
+  aws_region     = local.env_vars.locals.region
 
-  # Small + cheap for dev — 1 node, no HA
-  instance_types  = ["t3.small"]
+  # Cost-optimized for dev — single cheap node
+  instance_types  = ["t3a.nano"]
   desired_size    = 1
   min_size        = 1
-  max_size        = 2
+  max_size        = 1
 
   single_nat_gateway = true
 }

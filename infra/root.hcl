@@ -6,7 +6,7 @@ locals {
   # Parse the env.hcl from the calling environment directory
   env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
   env      = local.env_vars.locals.environment
-  region   = local.env_vars.locals.aws_region
+  region   = local.env_vars.locals.region
 
   # S3 state bucket — one bucket, keys partitioned by env + module
   state_bucket = "your-tfstate-bucket"   # <-- replace with your bucket name

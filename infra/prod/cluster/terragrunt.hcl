@@ -1,5 +1,5 @@
 include "root" {
-  path = find_in_parent_folders()
+  path = find_in_parent_folders("root.hcl")
 }
 
 locals {
@@ -14,13 +14,13 @@ terraform {
 inputs = {
   cluster_name   = "automate-cluster-${local.env}"
   environment    = local.env
-  aws_region     = local.env_vars.locals.aws_region
+  aws_region     = local.env_vars.locals.region
 
-  # HA setup — multi-node, dedicated NAT gateways per AZ
-  instance_types  = ["t3.medium"]
-  desired_size    = 3
+  # Cost-optimized HA setup — cheaper instances, fewer nodes
+  instance_types  = ["t3a.small"]
+  desired_size    = 2
   min_size        = 2
-  max_size        = 6
+  max_size        = 4
 
-  single_nat_gateway = false   # one NAT GW per AZ for prod resilience
+  single_nat_gateway = true   # Cost savings over per-AZ NAT GWs
 }

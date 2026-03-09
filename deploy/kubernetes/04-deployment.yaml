@@ -34,7 +34,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: umgapi-app
-        image: "014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:1.0.0"
+        image: "014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:1.0.1"
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

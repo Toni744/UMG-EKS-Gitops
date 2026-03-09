@@ -2,12 +2,12 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: fastapi-app
+  name: umgapi-app
   namespace: default
 spec:
   podSelector:
     matchLabels:
-      app: fastapi-app
+      app: umgapi-app
   policyTypes:
   - Ingress
   - Egress
@@ -18,7 +18,7 @@ spec:
           name: default
     - podSelector:
         matchLabels:
-          app: fastapi-app
+          app: umgapi-app
     ports:
     - protocol: TCP
       port: 8080

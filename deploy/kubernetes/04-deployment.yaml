@@ -2,10 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fastapi-app
+  name: umgapi-app
   namespace: default
   labels:
-    app: fastapi-app
+    app: umgapi-app
     version: v1
 spec:
   replicas: 2
@@ -16,11 +16,11 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app: fastapi-app
+      app: umgapi-app
   template:
     metadata:
       labels:
-        app: fastapi-app
+        app: umgapi-app
         version: v1
       annotations:
         prometheus.io/scrape: "true"
@@ -33,38 +33,9 @@ spec:
         runAsUser: 1000
         fsGroup: 1000
       containers:
-      - name: fastapi-app
-        image: python:3.12-slim
+      - name: umgapi-app
+        image: "<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/umgapi-app:<SEMVER_TAG>"
         imagePullPolicy: IfNotPresent
-        workingDir: /app
-        command:
-          - /bin/bash
-          - -c
-          - |
-            pip install -q fastapi uvicorn[standard] &&
-            python -c "
-            import time
-            from fastapi import FastAPI
-            from fastapi.responses import JSONResponse
-
-            app = FastAPI(title='Automate All The Things API')
-
-            @app.get('/')
-            def root():
-                return JSONResponse(content={
-                    'message': 'Automate all the things!',
-                    'timestamp': int(time.time())
-                })
-
-            @app.get('/health')
-            def health():
-                return {'status': 'ok'}
-
-            if __name__ == '__main__':
-                import uvicorn
-                uvicorn.run(app, host='0.0.0.0', port=8080)
-            " &
-            uvicorn --app-dir /app app:app --host 0.0.0.0 --port 8080
         ports:
         - name: http
           containerPort: 8080
@@ -133,5 +104,5 @@ spec:
                 - key: app
                   operator: In
                   values:
-                  - fastapi-app
+                  - umgapi-app
               topologyKey: kubernetes.io/hostname

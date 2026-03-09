@@ -126,7 +126,7 @@ kubectl apply -k .
 kubectl get pods -n default
 
 # Check deployment status
-kubectl rollout status deployment/fastapi-app -n default
+kubectl rollout status deployment/umgapi-app -n default
 
 # Check HPA
 kubectl get hpa -n default
@@ -135,10 +135,10 @@ kubectl get hpa -n default
 kubectl get svc -n default
 
 # View logs
-kubectl logs -f deployment/fastapi-app -n default
+kubectl logs -f deployment/umgapi-app -n default
 
 # Test the application (port-forward)
-kubectl port-forward svc/fastapi-app 8080:80 -n default
+kubectl port-forward svc/umgapi-app 8080:80 -n default
 curl http://localhost:8080/
 ```
 

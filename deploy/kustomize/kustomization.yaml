@@ -12,7 +12,7 @@ resources:
   - 06-hpa.yaml
 
 commonLabels:
-  app.kubernetes.io/name: fastapi-app
+  app.kubernetes.io/name: umgapi-app
   app.kubernetes.io/version: "1.0"
   app.kubernetes.io/managed-by: kustomize
 

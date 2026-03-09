@@ -135,22 +135,6 @@ resource "aws_security_group" "eks_cluster" {
   description = "Security group for EKS cluster"
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.node_group.id]
-    description     = "Allow traffic from worker nodes"
-  }
-
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "udp"
-    security_groups = [aws_security_group.node_group.id]
-    description     = "Allow UDP traffic from worker nodes"
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -170,49 +154,6 @@ resource "aws_security_group" "node_group" {
   description = "Security group for EKS nodes"
   vpc_id      = aws_vpc.main.id
 
-  # Allow cluster to nodes
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster.id]
-    description     = "Allow TCP from cluster"
-  }
-
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "udp"
-    security_groups = [aws_security_group.eks_cluster.id]
-    description     = "Allow UDP from cluster"
-  }
-
-  # Allow node-to-node communication (pod networking, CNI)
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "tcp"
-    security_groups = [aws_security_group.node_group.id]
-    description     = "Allow TCP between nodes (pod networking)"
-  }
-
-  ingress {
-    from_port       = 0
-    to_port         = 65535
-    protocol        = "udp"
-    security_groups = [aws_security_group.node_group.id]
-    description     = "Allow UDP between nodes (pod networking)"
-  }
-
-  # Allow Kubelet API (for cluster health checks)
-  ingress {
-    from_port       = 10250
-    to_port         = 10250
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_cluster.id]
-    description     = "Allow Kubelet API access"
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -225,4 +166,83 @@ resource "aws_security_group" "node_group" {
     var.tags,
     { Name = "${var.cluster_name}-node-sg" }
   )
+}
+
+# ── Security Group Rules (separate to avoid circular dependencies) ──────────
+
+# Allow cluster to nodes (TCP)
+resource "aws_security_group_rule" "cluster_to_node_tcp" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_cluster.id
+  security_group_id        = aws_security_group.node_group.id
+  description              = "Allow TCP from cluster to nodes"
+}
+
+# Allow cluster to nodes (UDP)
+resource "aws_security_group_rule" "cluster_to_node_udp" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "udp"
+  source_security_group_id = aws_security_group.eks_cluster.id
+  security_group_id        = aws_security_group.node_group.id
+  description              = "Allow UDP from cluster to nodes"
+}
+
+# Allow Kubelet API access from cluster
+resource "aws_security_group_rule" "cluster_to_kubelet" {
+  type                     = "ingress"
+  from_port                = 10250
+  to_port                  = 10250
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_cluster.id
+  security_group_id        = aws_security_group.node_group.id
+  description              = "Allow Kubelet API access from cluster"
+}
+
+# Allow node-to-node communication (TCP)
+resource "aws_security_group_rule" "node_to_node_tcp" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.node_group.id
+  security_group_id        = aws_security_group.node_group.id
+  description              = "Allow TCP between nodes (pod networking)"
+}
+
+# Allow node-to-node communication (UDP)
+resource "aws_security_group_rule" "node_to_node_udp" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "udp"
+  source_security_group_id = aws_security_group.node_group.id
+  security_group_id        = aws_security_group.node_group.id
+  description              = "Allow UDP between nodes (pod networking)"
+}
+
+# Allow nodes to cluster (TCP)
+resource "aws_security_group_rule" "node_to_cluster_tcp" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.node_group.id
+  security_group_id        = aws_security_group.eks_cluster.id
+  description              = "Allow TCP from worker nodes to cluster"
+}
+
+# Allow nodes to cluster (UDP)
+resource "aws_security_group_rule" "node_to_cluster_udp" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "udp"
+  source_security_group_id = aws_security_group.node_group.id
+  security_group_id        = aws_security_group.eks_cluster.id
+  description              = "Allow UDP from worker nodes to cluster"
 }

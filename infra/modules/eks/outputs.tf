@@ -26,7 +26,7 @@ output "cluster_oidc_issuer_url" {
 
 output "cluster_security_group_id" {
   description = "Security group ID attached to the EKS cluster"
-  value       = module.iam.cluster_sg_id
+  value       = module.networking.cluster_sg_id
 }
 
 output "node_group_id" {
@@ -41,7 +41,7 @@ output "node_group_arn" {
 
 output "node_security_group_id" {
   description = "Security group ID of worker nodes"
-  value       = module.iam.node_sg_id
+  value       = module.networking.node_sg_id
 }
 
 output "vpc_id" {

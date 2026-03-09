@@ -9,16 +9,22 @@ locals {
   region   = local.env_vars.locals.region
 
   # S3 state bucket — one bucket, keys partitioned by env + module
-  state_bucket = "your-tfstate-bucket"   # <-- replace with your bucket name
-  lock_table   = "terraform-lock"
+  # Uses native S3 locking (no DynamoDB table required)
+  state_bucket = "umgapi-tfstate-bucket"   # <-- replace with your bucket name
+
 }
 
 # ── Remote state backend (generated per module path) ─────────────────────────
 remote_state {
-  backend = "local"
+  backend = "s3"
 
   config = {
-    path = "${get_parent_terragrunt_dir()}/.terragrunt-cache/${path_relative_to_include()}/terraform.tfstate"
+    bucket         = local.state_bucket
+    key            = "${local.env}/${path_relative_to_include()}/terraform.tfstate"
+    region         = local.region
+    encrypt        = true
+    # S3 native locking (no DynamoDB table needed)
+    # https://developer.hashicorp.com/terraform/language/settings/backends/s3#locking
   }
 
   generate = {

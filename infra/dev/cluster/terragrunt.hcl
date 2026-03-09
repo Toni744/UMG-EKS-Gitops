@@ -12,7 +12,7 @@ terraform {
 }
 
 inputs = {
-  cluster_name   = "automate-cluster-${local.env}"
+  cluster_name   = "umgapi-cluster-${local.env}"
   environment    = local.env
   aws_region     = local.env_vars.locals.region
 
@@ -20,7 +20,8 @@ inputs = {
   instance_types  = ["t3a.nano"]
   desired_size    = 1
   min_size        = 1
-  max_size        = 1
+  max_size        = 2
 
   single_nat_gateway = true
+  enable_nat_gateway = false  # Save ~$30/month on NAT Gateway costs
 }

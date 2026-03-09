@@ -29,6 +29,7 @@ module "networking" {
   cluster_name       = var.cluster_name
   vpc_cidr           = var.vpc_cidr
   single_nat_gateway = var.single_nat_gateway
+  enable_nat_gateway = var.enable_nat_gateway
   tags               = local.common_tags
 }
 

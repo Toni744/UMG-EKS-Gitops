@@ -64,7 +64,7 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  count  = var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)
+  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
   domain = "vpc"
 
   depends_on = [aws_internet_gateway.main]
@@ -76,7 +76,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
-  count         = var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)
+  count         = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
   depends_on    = [aws_internet_gateway.main]
@@ -108,7 +108,7 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_route_table" "private" {
-  count  = var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)
+  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
   vpc_id = aws_vpc.main.id
 
   route {
@@ -123,7 +123,7 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private)
+  count          = var.enable_nat_gateway ? length(aws_subnet.private) : 0
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = var.single_nat_gateway ? aws_route_table.private[0].id : aws_route_table.private[count.index].id
 }

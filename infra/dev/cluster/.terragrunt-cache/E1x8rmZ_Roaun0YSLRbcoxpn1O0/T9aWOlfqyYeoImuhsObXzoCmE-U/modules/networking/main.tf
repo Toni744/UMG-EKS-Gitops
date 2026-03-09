@@ -64,7 +64,7 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  count  = var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)
+  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
   domain = "vpc"
 
   depends_on = [aws_internet_gateway.main]
@@ -76,7 +76,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
-  count         = var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)
+  count         = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
   depends_on    = [aws_internet_gateway.main]
@@ -108,7 +108,7 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_route_table" "private" {
-  count  = var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)
+  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
   vpc_id = aws_vpc.main.id
 
   route {
@@ -123,7 +123,106 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private)
+  count          = var.enable_nat_gateway ? length(aws_subnet.private) : 0
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = var.single_nat_gateway ? aws_route_table.private[0].id : aws_route_table.private[count.index].id
+}
+
+# ── Security Groups for EKS ─────────────────────────────────────────────────
+
+resource "aws_security_group" "eks_cluster" {
+  name        = "${var.cluster_name}-cluster-sg"
+  description = "Security group for EKS cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow traffic from worker nodes"
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "udp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow UDP traffic from worker nodes"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(
+    var.tags,
+    { Name = "${var.cluster_name}-cluster-sg" }
+  )
+}
+
+resource "aws_security_group" "node_group" {
+  name        = "${var.cluster_name}-node-sg"
+  description = "Security group for EKS nodes"
+  vpc_id      = aws_vpc.main.id
+
+  # Allow cluster to nodes
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow TCP from cluster"
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "udp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow UDP from cluster"
+  }
+
+  # Allow node-to-node communication (pod networking, CNI)
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow TCP between nodes (pod networking)"
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "udp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow UDP between nodes (pod networking)"
+  }
+
+  # Allow Kubelet API (for cluster health checks)
+  ingress {
+    from_port       = 10250
+    to_port         = 10250
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow Kubelet API access"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(
+    var.tags,
+    { Name = "${var.cluster_name}-node-sg" }
+  )
 }

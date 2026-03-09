@@ -127,3 +127,102 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = var.single_nat_gateway ? aws_route_table.private[0].id : aws_route_table.private[count.index].id
 }
+
+# ── Security Groups for EKS ─────────────────────────────────────────────────
+
+resource "aws_security_group" "eks_cluster" {
+  name        = "${var.cluster_name}-cluster-sg"
+  description = "Security group for EKS cluster"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow traffic from worker nodes"
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "udp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow UDP traffic from worker nodes"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(
+    var.tags,
+    { Name = "${var.cluster_name}-cluster-sg" }
+  )
+}
+
+resource "aws_security_group" "node_group" {
+  name        = "${var.cluster_name}-node-sg"
+  description = "Security group for EKS nodes"
+  vpc_id      = aws_vpc.main.id
+
+  # Allow cluster to nodes
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow TCP from cluster"
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "udp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow UDP from cluster"
+  }
+
+  # Allow node-to-node communication (pod networking, CNI)
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow TCP between nodes (pod networking)"
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "udp"
+    security_groups = [aws_security_group.node_group.id]
+    description     = "Allow UDP between nodes (pod networking)"
+  }
+
+  # Allow Kubelet API (for cluster health checks)
+  ingress {
+    from_port       = 10250
+    to_port         = 10250
+    protocol        = "tcp"
+    security_groups = [aws_security_group.eks_cluster.id]
+    description     = "Allow Kubelet API access"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = merge(
+    var.tags,
+    { Name = "${var.cluster_name}-node-sg" }
+  )
+}

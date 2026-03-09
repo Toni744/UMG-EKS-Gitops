@@ -29,6 +29,7 @@ module "networking" {
   cluster_name       = var.cluster_name
   vpc_cidr           = var.vpc_cidr
   single_nat_gateway = var.single_nat_gateway
+  enable_nat_gateway = var.enable_nat_gateway
   tags               = local.common_tags
 }
 
@@ -36,7 +37,6 @@ module "iam" {
   source = "./modules/iam"
 
   cluster_name = var.cluster_name
-  vpc_id       = module.networking.vpc_id
   tags         = local.common_tags
 }
 
@@ -47,7 +47,7 @@ module "cluster" {
   kubernetes_version = var.kubernetes_version
   role_arn           = module.iam.cluster_role_arn
   subnet_ids         = concat(module.networking.public_subnet_ids, module.networking.private_subnet_ids)
-  security_group_id  = module.iam.cluster_sg_id
+  security_group_id  = module.networking.cluster_sg_id
   tags               = local.common_tags
 }
 
@@ -57,7 +57,7 @@ module "node_group" {
   cluster_name      = var.cluster_name
   node_role_arn     = module.iam.node_role_arn
   subnet_ids        = module.networking.private_subnet_ids
-  security_group_id = module.iam.node_sg_id
+  security_group_id = module.networking.node_sg_id
   instance_types    = var.instance_types
   desired_size      = var.desired_size
   min_size          = var.min_size

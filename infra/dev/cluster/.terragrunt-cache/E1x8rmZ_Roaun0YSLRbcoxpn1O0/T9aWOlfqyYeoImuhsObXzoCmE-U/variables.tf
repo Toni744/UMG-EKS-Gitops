@@ -43,6 +43,12 @@ variable "single_nat_gateway" {
   default     = false
 }
 
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for private subnet internet access (disable to save costs in dev)"
+  type        = bool
+  default     = true
+}
+
 variable "kubernetes_version" {
   description = "Kubernetes version to use for the EKS cluster"
   type        = string

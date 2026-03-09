@@ -34,7 +34,7 @@ spec:
         fsGroup: 1000
       containers:
       - name: umgapi-app
-        image: "<AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/umgapi-app:<SEMVER_TAG>"
+        image: "014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:1.0.0"
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

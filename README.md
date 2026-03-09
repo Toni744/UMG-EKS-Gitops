@@ -142,6 +142,49 @@ kubectl port-forward svc/umgapi-app 8080:80 -n default
 curl http://localhost:8080/
 ```
 
+## ArgoCD Setup for Continuous Deployment
+
+This project includes ArgoCD for GitOps-based continuous deployment.
+
+### Install ArgoCD and Ingress Controller
+
+```bash
+# Deploy NGINX Ingress Controller and ArgoCD using Kustomize
+cd deploy/kustomize
+kubectl apply -k .
+
+# Wait for ArgoCD to be ready
+kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd
+```
+
+### Access ArgoCD UI
+
+```bash
+# Get initial admin password
+kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 -d
+
+# Port-forward ArgoCD server (or use the Ingress if configured)
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+# Open https://localhost:8080 in your browser
+# Login with username: admin and the password above
+```
+
+### Configure ArgoCD Application
+
+The ArgoCD Application is already configured to sync your application from Git:
+
+- **Repository**: https://github.com/Toni744/UMG-EKS-Gitops
+- **Path**: deploy/kustomize
+- **Destination**: default namespace
+- **Sync Policy**: Automated with prune and self-heal
+
+The Application will automatically deploy changes pushed to the main branch.
+
+### Update Domain in Ingress
+
+Edit `deploy/argocd/ingress.yaml` and replace `argocd.example.com` with your actual domain.
+
 ## IRSA (IAM Roles for Service Accounts) Setup
 
 The application uses IRSA to securely access AWS services without storing credentials.

@@ -10,6 +10,10 @@ resources:
   - 04-deployment.yaml
   - 05-service.yaml
   - 06-hpa.yaml
+  - ../ingress/nginx-ingress.yaml
+  - ../argocd/argocd-install.yaml
+  - ../argocd/ingress.yaml
+  - ../argocd/application.yaml
 
 commonLabels:
   app.kubernetes.io/name: umgapi-app

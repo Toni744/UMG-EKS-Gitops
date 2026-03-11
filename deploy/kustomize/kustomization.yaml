@@ -4,12 +4,12 @@ kind: Kustomization
 namespace: default
 
 resources:
-  - 01-namespace.yaml
-  - 02-service-account.yaml
-  - 03-configmap.yaml
-  - 04-deployment.yaml
-  - 05-service.yaml
-  - 06-hpa.yaml
+  - ../kubernetes/01-namespace.yaml
+  - ../kubernetes/02-service-account.yaml
+  - ../kubernetes/03-configmap.yaml
+  - ../kubernetes/04-deployment.yaml
+  - ../kubernetes/05-service.yaml
+  - ../kubernetes/06-hpa.yaml
   - ../ingress/nginx-ingress.yaml
   - ../argocd/argocd-install.yaml
   - ../argocd/ingress.yaml
@@ -21,4 +21,10 @@ commonLabels:
   app.kubernetes.io/managed-by: kustomize
 
 commonAnnotations:
-  project: automate-all-the-things
+  project: umgapi-gitops
+
+# Enable image update via kustomize
+images:
+  - name: umgapi-app
+    newName: 014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app
+    newTag: v1.0.0

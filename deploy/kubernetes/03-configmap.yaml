@@ -5,5 +5,5 @@ metadata:
   name: app-config
   namespace: default
 data:
-  app_name: "automate-all-the-things"
+  app_name: "umgapi-gitops"
   log_level: "INFO"

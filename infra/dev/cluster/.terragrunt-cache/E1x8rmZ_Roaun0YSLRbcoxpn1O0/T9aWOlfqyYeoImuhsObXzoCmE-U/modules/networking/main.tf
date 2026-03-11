@@ -4,9 +4,9 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# Limit to 2 AZs for cost optimization
+# Use 2 AZs minimum for EKS requirement
 locals {
-  az_count = 2
+  az_count = min(2, length(data.aws_availability_zones.available.names))
   azs      = slice(data.aws_availability_zones.available.names, 0, local.az_count)
 }
 
@@ -31,7 +31,7 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count                   = local.az_count
+  count                   = 2
   vpc_id                  = aws_vpc.main.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, count.index)
   availability_zone       = local.azs[count.index]
@@ -48,10 +48,11 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  count             = local.az_count
+  count             = 2
   vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 4, count.index + local.az_count)
+  cidr_block        = cidrsubnet(var.vpc_cidr, 4, count.index + 2)
   availability_zone = local.azs[count.index]
+  map_public_ip_on_launch = false
 
   tags = merge(
     var.tags,
@@ -64,21 +65,21 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
+  count  = var.enable_nat_gateway ? 1 : 0
   domain = "vpc"
 
   depends_on = [aws_internet_gateway.main]
 
   tags = merge(
     var.tags,
-    { Name = "${var.cluster_name}-eip-${count.index + 1}" }
+    { Name = "${var.cluster_name}-eip-nat" }
   )
 }
 
 resource "aws_nat_gateway" "main" {
-  count         = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
-  allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id
+  count         = var.enable_nat_gateway ? 1 : 0
+  allocation_id = aws_eip.nat[0].id
+  subnet_id     = aws_subnet.public[0].id
   depends_on    = [aws_internet_gateway.main]
 
   tags = merge(
@@ -170,29 +171,7 @@ resource "aws_security_group" "node_group" {
 
 # ── Security Group Rules (separate to avoid circular dependencies) ──────────
 
-# Allow cluster to nodes (TCP)
-resource "aws_security_group_rule" "cluster_to_node_tcp" {
-  type                     = "ingress"
-  from_port                = 0
-  to_port                  = 65535
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.eks_cluster.id
-  security_group_id        = aws_security_group.node_group.id
-  description              = "Allow TCP from cluster to nodes"
-}
-
-# Allow cluster to nodes (UDP)
-resource "aws_security_group_rule" "cluster_to_node_udp" {
-  type                     = "ingress"
-  from_port                = 0
-  to_port                  = 65535
-  protocol                 = "udp"
-  source_security_group_id = aws_security_group.eks_cluster.id
-  security_group_id        = aws_security_group.node_group.id
-  description              = "Allow UDP from cluster to nodes"
-}
-
-# Allow Kubelet API access from cluster
+# Allow Kubelet API access from cluster (10250)
 resource "aws_security_group_rule" "cluster_to_kubelet" {
   type                     = "ingress"
   from_port                = 10250
@@ -203,46 +182,24 @@ resource "aws_security_group_rule" "cluster_to_kubelet" {
   description              = "Allow Kubelet API access from cluster"
 }
 
-# Allow node-to-node communication (TCP)
-resource "aws_security_group_rule" "node_to_node_tcp" {
+# Allow node-to-node communication for pod networking (CNI)
+resource "aws_security_group_rule" "node_to_node" {
   type                     = "ingress"
   from_port                = 0
   to_port                  = 65535
-  protocol                 = "tcp"
+  protocol                 = "-1"
   source_security_group_id = aws_security_group.node_group.id
   security_group_id        = aws_security_group.node_group.id
-  description              = "Allow TCP between nodes (pod networking)"
+  description              = "Allow all traffic between nodes (pod networking)"
 }
 
-# Allow node-to-node communication (UDP)
-resource "aws_security_group_rule" "node_to_node_udp" {
+# Allow nodes to cluster control plane
+resource "aws_security_group_rule" "node_to_cluster" {
   type                     = "ingress"
   from_port                = 0
   to_port                  = 65535
-  protocol                 = "udp"
-  source_security_group_id = aws_security_group.node_group.id
-  security_group_id        = aws_security_group.node_group.id
-  description              = "Allow UDP between nodes (pod networking)"
-}
-
-# Allow nodes to cluster (TCP)
-resource "aws_security_group_rule" "node_to_cluster_tcp" {
-  type                     = "ingress"
-  from_port                = 0
-  to_port                  = 65535
-  protocol                 = "tcp"
+  protocol                 = "-1"
   source_security_group_id = aws_security_group.node_group.id
   security_group_id        = aws_security_group.eks_cluster.id
-  description              = "Allow TCP from worker nodes to cluster"
-}
-
-# Allow nodes to cluster (UDP)
-resource "aws_security_group_rule" "node_to_cluster_udp" {
-  type                     = "ingress"
-  from_port                = 0
-  to_port                  = 65535
-  protocol                 = "udp"
-  source_security_group_id = aws_security_group.node_group.id
-  security_group_id        = aws_security_group.eks_cluster.id
-  description              = "Allow UDP from worker nodes to cluster"
+  description              = "Allow all traffic from worker nodes to cluster"
 }

@@ -69,11 +69,6 @@ output "vpc_cni_role_arn" {
   value       = module.irsa.vpc_cni_role_arn
 }
 
-output "app_role_arn" {
-  description = "IAM role ARN for application service account (IRSA)"
-  value       = module.irsa.app_role_arn
-}
-
 output "configure_kubectl" {
   description = "Command to configure kubectl"
   value       = "aws eks update-kubeconfig --region us-east-1 --name ${module.cluster.cluster_id}"

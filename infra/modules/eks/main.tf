@@ -56,7 +56,7 @@ module "node_group" {
 
   cluster_name      = var.cluster_name
   node_role_arn     = module.iam.node_role_arn
-  subnet_ids        = module.networking.private_subnet_ids
+  subnet_ids        = var.enable_nat_gateway ? module.networking.private_subnet_ids : module.networking.public_subnet_ids
   security_group_id = module.networking.node_sg_id
   instance_types    = var.instance_types
   desired_size      = var.desired_size
@@ -76,14 +76,3 @@ module "irsa" {
   tags                    = local.common_tags
 }
 
-module "addons" {
-  source = "./modules/addons"
-
-  cluster_name       = var.cluster_name
-  node_group_id      = module.node_group.node_group_id
-  kubernetes_version = var.kubernetes_version
-  vpc_cni_role_arn   = module.irsa.vpc_cni_role_arn
-  tags               = local.common_tags
-
-  depends_on = [module.node_group]
-}

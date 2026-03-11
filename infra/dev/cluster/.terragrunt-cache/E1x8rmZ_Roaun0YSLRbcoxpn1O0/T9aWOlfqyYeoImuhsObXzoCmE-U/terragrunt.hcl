@@ -15,13 +15,14 @@ inputs = {
   cluster_name   = "umgapi-cluster-${local.env}"
   environment    = local.env
   aws_region     = local.env_vars.locals.region
+  kubernetes_version = "1.29"
 
-  # Cost-optimized for dev — single cheap node
-  instance_types  = ["t3a.nano"]
-  desired_size    = 1
-  min_size        = 1
+  # Cost-optimized for dev with adequate resources for addons
+  instance_types  = ["t3a.medium"]
+  desired_size    = 2
+  min_size        = 2
   max_size        = 2
 
   single_nat_gateway = true
-  enable_nat_gateway = false  # Save ~$30/month on NAT Gateway costs
+  enable_nat_gateway = true  # Save ~$30/month on NAT Gateway costs
 }

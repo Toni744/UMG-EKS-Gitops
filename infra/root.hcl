@@ -14,25 +14,26 @@ locals {
 
 }
 
-# ── Remote state backend (generated per module path) ─────────────────────────
-remote_state {
-  backend = "s3"
-
-  config = {
-    bucket         = local.state_bucket
-    key            = "${local.env}/${path_relative_to_include()}/terraform.tfstate"
-    region         = local.region
-    encrypt        = true
-    use_lockfile = true
-    # S3 native locking (no DynamoDB table needed)
-    # https://developer.hashicorp.com/terraform/language/settings/backends/s3#locking
-  }
-
-  generate = {
-    path      = "backend.tf"
-    if_exists = "overwrite_terragrunt"
-  }
-}
+# ── Remote state backend (DISABLED FOR LOCAL TESTING) ──────────────────────
+# To re-enable S3 backend, uncomment the remote_state block below
+# remote_state {
+#   backend = "s3"
+# 
+#   config = {
+#     bucket         = local.state_bucket
+#     key            = "${local.env}/${path_relative_to_include()}/terraform.tfstate"
+#     region         = local.region
+#     encrypt        = true
+#     use_lockfile = true
+#     # S3 native locking (no DynamoDB table needed)
+#     # https://developer.hashicorp.com/terraform/language/settings/backends/s3#locking
+#   }
+# 
+#   generate = {
+#     path      = "backend.tf"
+#     if_exists = "overwrite_terragrunt"
+#   }
+# }
 
 # ── AWS provider (generated into each module directory) ───────────────────────
 generate "provider" {

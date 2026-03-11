@@ -1,72 +1,32 @@
 output "cluster_id" {
-  description = "The ID/name of the EKS cluster"
+  description = "EKS cluster ID"
   value       = module.cluster.cluster_id
 }
 
-output "cluster_arn" {
-  description = "The ARN of the EKS cluster"
-  value       = module.cluster.cluster_arn
-}
-
 output "cluster_endpoint" {
-  description = "Endpoint for your Kubernetes API server"
+  description = "Kubernetes API endpoint"
   value       = module.cluster.cluster_endpoint
 }
 
 output "cluster_certificate_authority_data" {
-  description = "Base64 encoded certificate data required to communicate with the cluster"
+  description = "Base64 encoded certificate for cluster access"
   value       = module.cluster.cluster_certificate_authority_data
   sensitive   = true
 }
 
-output "cluster_oidc_issuer_url" {
-  description = "The URL on the EKS cluster OIDC Issuer"
-  value       = module.cluster.cluster_oidc_issuer_url
-}
-
-output "cluster_security_group_id" {
-  description = "Security group ID attached to the EKS cluster"
-  value       = module.networking.cluster_sg_id
-}
-
-output "node_group_id" {
-  description = "EKS node group ID"
-  value       = module.node_group.node_group_id
-}
-
-output "node_group_arn" {
-  description = "ARN of the EKS Node Group"
-  value       = module.node_group.node_group_arn
-}
-
-output "node_security_group_id" {
-  description = "Security group ID of worker nodes"
-  value       = module.networking.node_sg_id
-}
-
 output "vpc_id" {
-  description = "The ID of the VPC"
+  description = "VPC ID"
   value       = module.networking.vpc_id
 }
 
 output "public_subnet_ids" {
-  description = "List of public subnet IDs"
+  description = "Public subnet IDs"
   value       = module.networking.public_subnet_ids
 }
 
 output "private_subnet_ids" {
-  description = "List of private subnet IDs"
+  description = "Private subnet IDs"
   value       = module.networking.private_subnet_ids
-}
-
-output "nat_gateway_ips" {
-  description = "Elastic IPs of NAT Gateways"
-  value       = module.networking.nat_gateway_ips
-}
-
-output "vpc_cni_role_arn" {
-  description = "IAM role ARN used by VPC CNI (IRSA)"
-  value       = module.irsa.vpc_cni_role_arn
 }
 
 output "configure_kubectl" {

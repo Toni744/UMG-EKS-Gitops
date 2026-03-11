@@ -4,14 +4,18 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# Use 2 AZs minimum for EKS requirement
 locals {
-  az_count = min(2, length(data.aws_availability_zones.available.names))
-  azs      = slice(data.aws_availability_zones.available.names, 0, local.az_count)
+  # Defines all CIDRs in one place for easy adjustment
+  vpc_cidr              = "10.0.0.0/16"
+  public_subnet_cidrs   = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnet_cidrs  = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+  database_subnet_cidrs = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
+  
+  azs = ["us-east-1a", "us-east-1b"]
 }
 
 resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
+  cidr_block           = local.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
 
@@ -31,9 +35,9 @@ resource "aws_internet_gateway" "main" {
 }
 
 resource "aws_subnet" "public" {
-  count                   = 2
+  count             = length(local.azs)
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 4, count.index)
+  cidr_block              = local.public_subnet_cidrs[count.index]
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
 
@@ -48,9 +52,9 @@ resource "aws_subnet" "public" {
 }
 
 resource "aws_subnet" "private" {
-  count             = 2
+  count             = length(local.azs)
   vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 4, count.index + 2)
+  cidr_block        = local.private_subnet_cidrs[count.index]
   availability_zone = local.azs[count.index]
   map_public_ip_on_launch = false
 

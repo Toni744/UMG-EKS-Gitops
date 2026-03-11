@@ -15,7 +15,7 @@ inputs = {
   cluster_name   = "umgapi-cluster-${local.env}"
   environment    = local.env
   aws_region     = local.env_vars.locals.region
-  kubernetes_version = "1.29"
+  kubernetes_version = "1.32"
 
   # Cost-optimized for dev with adequate resources for addons
   instance_types  = ["t3a.medium"]

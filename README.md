@@ -1,4 +1,61 @@
-# UMG EKS GitOps
+# UMG EKS GitOps - Simple Setup
+
+A minimal EKS cluster with your containerized application.
+
+## Quick Start
+
+```bash
+# 1. Deploy cluster
+cd infra/dev/cluster
+terragrunt apply
+
+# 2. Configure kubectl
+aws eks update-kubeconfig --region us-east-1 --name umgapi-cluster-dev
+
+# 3. Deploy app
+kubectl apply -f deploy/simple-deployment.yaml
+
+# 4. Access app
+kubectl get svc -n app
+# Use the EXTERNAL-IP to access your app
+```
+
+## Structure
+
+- `app/` - Your containerized application
+- `infra/` - Terraform/Terragrunt infrastructure
+- `deploy/simple-deployment.yaml` - Kubernetes manifest (namespace, deployment, service)
+
+## What You Get
+
+- EKS Cluster (1.29) with 2 x t3.medium nodes
+- App deployed with LoadBalancer service (external access)
+- ConfigMap for app configuration
+  - Health checks (liveness + readiness)
+
+## Cleanup
+
+```bash
+# Delete app
+kubectl delete -f deploy/simple-deployment.yaml
+
+# Destroy cluster
+cd infra/dev/cluster
+terragrunt destroy
+```
+
+## Troubleshooting
+
+```bash
+# Check pod status
+kubectl get pods -n app
+
+# View logs
+kubectl logs -n app deployment/umgapi-app
+
+# Describe pod for errors
+kubectl describe pod -n app
+```
 
 FastAPI application on EKS with automated CI/CD pipeline: GitHub Actions → ECR → ArgoCD → Kubernetes.
 
@@ -81,33 +138,114 @@ The pipeline automatically builds and deploys when you push to `main`.
 
 ### Enable Pipeline
 
-1. **Create IAM Role for GitHub Actions OIDC:**
-   ```json
-   {
-     "Effect": "Allow",
-     "Principal": {
-       "Federated": "arn:aws:iam::014772274523:oidc-provider/token.actions.githubusercontent.com"
-     },
-     "Action": "sts:AssumeRoleWithWebIdentity",
-     "Condition": {
-       "StringEquals": {
-         "token.actions.githubusercontent.com:sub": "repo:Toni744/UMG-EKS-Gitops:ref:refs/heads/main"
-       }
-     }
-   }
-   ```
+1. **Create AWS OIDC Provider for GitHub:**
+
+```bash
+# Set variables
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+echo "AWS Account ID: $AWS_ACCOUNT_ID"
+
+# Create OIDC provider
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1 \
+  --region us-east-1
+
+echo "✓ OIDC Provider created"
+```
+
+2. **Create IAM Role for GitHub Actions:**
+
+```bash
+# Create trust policy
+cat > /tmp/trust-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::AWS_ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          \"token.actions.githubusercontent.com:sub\": \"repo:YOUR_GITHUB_USERNAME/YOUR_REPO_NAME:ref:refs/heads/main\"
+        }
+      }
+    }
+  ]
+}
+EOF
+
+# Replace account ID
+sed -i "s/AWS_ACCOUNT_ID/$AWS_ACCOUNT_ID/g" /tmp/trust-policy.json
+
+# Create role
+aws iam create-role \
+  --role-name github-oidc-ecr-role \
+  --assume-role-policy-document file:///tmp/trust-policy.json
+
+echo "✓ IAM Role created"
+```
 
 2. **Add ECR Permissions to Role:**
-   - `ecr:GetAuthorizationToken`
-   - `ecr:BatchCheckLayerAvailability`
-   - `ecr:PutImage`
-   - `ecr:InitiateLayerUpload`
-   - `ecr:UploadLayerPart`
-   - `ecr:CompleteLayerUpload`
 
-3. **Add GitHub Secret:**
-   - Go to: Settings → Secrets and variables → Actions
-   - Add: `AWS_ROLE_ARN` = `arn:aws:iam::014772274523:role/GitHubActionsRole`
+```bash
+# Create ECR policy
+cat > /tmp/ecr-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:DescribeRepositories"
+      ],
+      "Resource": "arn:aws:ecr:us-east-1:AWS_ACCOUNT_ID:repository/umgapi-app"
+    }
+  ]
+}
+EOF
+
+# Replace account ID
+sed -i "s/AWS_ACCOUNT_ID/$AWS_ACCOUNT_ID/g" /tmp/ecr-policy.json
+
+# Attach policy to role
+aws iam put-role-policy \
+  --role-name github-oidc-ecr-role \
+  --policy-name ecr-push-policy \
+  --policy-document file:///tmp/ecr-policy.json
+
+echo "✓ ECR policy attached"
+```
+
+3. **Get Your Role ARN:**
+
+```bash
+export ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/github-oidc-ecr-role"
+echo "Your Role ARN: $ROLE_ARN"
+```
+
+4. **Add GitHub Secret:**
+
+- Go to: https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME
+- Click **Settings** → **Secrets and variables** → **Actions**
+- Click **"New repository secret"**
+- Name: `AWS_ROLE_ARN`
+- Value: `arn:aws:iam::YOUR_AWS_ACCOUNT_ID:role/github-oidc-ecr-role` (use your account ID)
+- Click **"Add secret"**
 
 ### Test Pipeline
 
@@ -121,7 +259,7 @@ git commit -m "feat: new feature"
 git push origin main
 
 # Monitor
-# 1. GitHub Actions: https://github.com/Toni744/UMG-EKS-Gitops/actions
+# 1. GitHub Actions: https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/actions
 # 2. ArgoCD UI: https://localhost:8080 (via port-forward)
 # 3. kubectl: kubectl rollout status deployment/umgapi-app -n default
 ```
@@ -249,7 +387,7 @@ aws eks describe-cluster --name automate-cluster-dev --region us-east-1
 kubectl get nodes
 
 # GitHub Actions failing
-# Check: https://github.com/Toni744/UMG-EKS-Gitops/actions
+# Check: https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/actions
 # Common: Missing AWS_ROLE_ARN secret
 
 # ArgoCD not syncing

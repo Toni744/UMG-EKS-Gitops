@@ -397,13 +397,68 @@ Edit `deploy/kubernetes/03-configmap.yaml`:
 
 ## Cleanup
 
-```bash
-# Remove ArgoCD (application manifests auto-cleanup via ArgoCD prune)
-helm uninstall argocd -n argocd
+### Kubernetes Resources Only (Keep Cluster)
 
-# Destroy infrastructure
+```bash
+# Option 1: Delete via ArgoCD (recommended)
+kubectl delete application umgapi-app -n argocd
+# ArgoCD will automatically delete all managed resources
+
+# Option 2: Manual deletion
+kubectl delete -f deploy/kubernetes/ -n app
+kubectl delete namespace app
+
+# Verify cleanup
+kubectl get all -n app
+```
+
+### ArgoCD Only (Keep Cluster)
+
+```bash
+# Delete ArgoCD application first
+kubectl delete application umgapi-app -n argocd
+
+# Uninstall ArgoCD via Helm
+helm uninstall argocd -n argocd
+kubectl delete namespace argocd
+
+# Delete Kyverno (if installed)
+helm uninstall kyverno -n kyverno
+kubectl delete namespace kyverno
+```
+
+### Full Teardown (Delete Everything)
+
+```bash
+# 1. Delete Kubernetes resources first
+kubectl delete application umgapi-app -n argocd 2>/dev/null || true
+helm uninstall argocd -n argocd 2>/dev/null || true
+helm uninstall kyverno -n kyverno 2>/dev/null || true
+
+# 2. Delete namespaces
+kubectl delete namespace app argocd kyverno 2>/dev/null || true
+
+# 3. Destroy infrastructure
 cd infra/dev/cluster
 terragrunt destroy
+
+# 4. (Optional) Delete ECR images
+aws ecr batch-delete-image \
+  --repository-name umgapi \
+  --image-ids "$(aws ecr list-images --repository-name umgapi --query 'imageIds[*]' --output json)" \
+  --region <REGION>
+
+# 5. (Optional) Delete S3 state bucket
+aws s3 rb s3://your-tfstate-bucket --force
+```
+
+### Verify Full Cleanup
+
+```bash
+# Check no resources remain
+kubectl get all --all-namespaces | grep -E "app|argocd|kyverno"
+aws eks list-clusters --region <REGION>
+aws ec2 describe-vpcs --filters "Name=tag:Name,Values=*umgapi*" --region <REGION>
 ```
 
 ## Troubleshooting

@@ -136,60 +136,20 @@ FastAPI application on EKS with automated CI/CD pipeline: GitHub Actions → ECR
 GitHub (main branch)
   ↓ Push code
 GitHub Actions
-  ↓ Build & push image
+  ↓ Build & push image to ECR
 ECR (Container Registry)
-  ↓ Update manifest
-Kustomization (Git)
+  ↓ Update manifest in /deploy
+Git Repository
   ↓ Detect change
 ArgoCD
-  ↓ Sync cluster
+  ↓ Apply manifests
 EKS Cluster
   ↓ Rolling update
 FastAPI Application
 ```
-## Quick Start (Linux)
 
-### 1. Install Tools
+**Note:** For larger projects with multiple environments and overlays, combining ArgoCD with Kustomize provides powerful templating and patch management capabilities.
 
-```bash
-sudo apt-get update && sudo apt-get install -y terraform terragrunt awscli kubectl
-aws configure
-aws sts get-caller-identity
-```
-
-### 2. Deploy EKS Cluster
-
-```bash
-cd infra/dev/cluster
-terragrunt init
-terragrunt apply
-
-# Configure kubectl
-aws eks update-kubeconfig --region us-east-1 --name automate-cluster-dev
-kubectl get nodes
-```
-
-### 3. Deploy Application
-
-```bash
-# Using Kustomize (includes app + ArgoCD)
-kubectl apply -k deploy/kustomize/
-
-# Verify
-kubectl get pods -n app
-kubectl get pods -n argocd
-```
-
-### 4. Access ArgoCD
-
-```bash
-kubectl get secret argocd-initial-admin-secret -n argocd \
-  -o jsonpath="{.data.password}" | base64 -d
-
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-# Open: https://localhost:8080
-# Login: admin / <password above>
-```
 
 ## CI/CD Pipeline Setup
 
@@ -204,7 +164,7 @@ The pipeline automatically builds and deploys when you push to `main`.
 **Steps:**
 1. Build Docker image (multi-stage, Python 3.12)
 2. Push to ECR with commit SHA tag
-3. Update `deploy/kustomize/kustomization.yaml` with new image
+3. Update `deploy/deployment.yaml` with new image tag
 4. Commit back to repository
 
 ### Adding Secrets to the Github Pipeline
@@ -348,10 +308,10 @@ infra/
       └── modules/node_group/  # Worker nodes
 
 deploy/
-  ├── kubernetes/              # App manifests (01-08)
-  ├── kustomize/               # Kustomization + image patches
-  ├── argocd/                  # ArgoCD Application + ingress
-  └── ingress/                 # NGINX Ingress
+  ├── kubernetes/              # App manifests
+  ├── deployment.yaml          # Main deployment manifest
+  ├── argocd/                  # ArgoCD Application config
+  └── ingress/                 # NGINX Ingress (optional)
 
 app/
   ├── app.py                   # FastAPI app
@@ -438,8 +398,8 @@ Edit `deploy/kubernetes/03-configmap.yaml`:
 ## Cleanup
 
 ```bash
-# Remove application and ArgoCD
-kubectl delete -k deploy/kustomize/
+# Remove ArgoCD (application manifests auto-cleanup via ArgoCD prune)
+helm uninstall argocd -n argocd
 
 # Destroy infrastructure
 cd infra/dev/cluster
@@ -454,7 +414,7 @@ kubectl describe pod <pod-name> -n app
 kubectl logs <pod-name> -n app --previous
 
 # Cluster issues
-aws eks describe-cluster --name automate-cluster-dev --region us-east-1
+aws eks describe-cluster --name umgapi-cluster-dev --region <REGION>
 kubectl get nodes
 
 # GitHub Actions failing
@@ -472,5 +432,5 @@ kubectl logs deployment/argocd-server -n argocd
 - [Terragrunt](https://terragrunt.gruntwork.io/)
 - [ArgoCD](https://argo-cd.readthedocs.io/)
 - [GitHub Actions](https://docs.github.com/en/actions)
-- [Kustomize](https://kustomize.io/)
+- [Kustomize](https://kustomize.io/) - Useful for larger projects with multiple overlays
 ```

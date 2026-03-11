@@ -129,7 +129,7 @@ kubectl get nodes
 kubectl apply -k deploy/kustomize/
 
 # Verify
-kubectl get pods -n default
+kubectl get pods -n app
 kubectl get pods -n argocd
 ```
 
@@ -160,7 +160,7 @@ The pipeline automatically builds and deploys when you push to `main`.
 3. Update `deploy/kustomize/kustomization.yaml` with new image
 4. Commit back to repository
 
-### Enable Pipeline
+### Adding Secrets to the Github Pipeline
 
 1. **Create AWS OIDC Provider for GitHub:**
 
@@ -237,7 +237,7 @@ cat > /tmp/ecr-policy.json << 'EOF'
         "ecr:CompleteLayerUpload",
         "ecr:DescribeRepositories"
       ],
-      "Resource": "arn:aws:ecr:us-east-1:AWS_ACCOUNT_ID:repository/umgapi-app"
+      "Resource": "*"
     }
   ]
 }
@@ -285,7 +285,7 @@ git push origin main
 # Monitor
 # 1. GitHub Actions: https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/actions
 # 2. ArgoCD UI: https://localhost:8080 (via port-forward)
-# 3. kubectl: kubectl rollout status deployment/umgapi-app -n default
+# 3. kubectl: kubectl rollout status deployment/umgapi-app -n app
 ```
 
 ## Project Structure
@@ -320,15 +320,15 @@ app/
 ### View Logs
 
 ```bash
-kubectl logs deployment/umgapi-app -n default -f
+kubectl logs deployment/umgapi-app -n app -f
 kubectl logs deployment/argocd-server -n argocd -f
 ```
 
 ### Scale Application
 
 ```bash
-kubectl scale deployment umgapi-app --replicas=5 -n default
-kubectl get hpa umgapi-app -n default
+kubectl scale deployment umgapi-app --replicas=5 -n app
+kubectl get hpa umgapi-app -n app
 ```
 
 ### Update App Code
@@ -338,7 +338,7 @@ kubectl get hpa umgapi-app -n default
 # Commit and push to main
 # GitHub Actions builds and pushes to ECR
 # ArgoCD auto-syncs within 3 minutes
-# Monitor: kubectl rollout status deployment/umgapi-app -n default
+# Monitor: kubectl rollout status deployment/umgapi-app -n app
 ```
 
 ### Access S3 or AWS Services
@@ -403,8 +403,8 @@ terragrunt destroy
 
 ```bash
 # Pods not running
-kubectl describe pod <pod-name> -n default
-kubectl logs <pod-name> -n default --previous
+kubectl describe pod <pod-name> -n app
+kubectl logs <pod-name> -n app --previous
 
 # Cluster issues
 aws eks describe-cluster --name automate-cluster-dev --region us-east-1

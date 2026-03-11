@@ -1,6 +1,6 @@
-# UMG EKS GitOps - Simple Setup
+# UMG EKS GitOps - ArgoCD Setup
 
-A minimal EKS cluster with your containerized application.
+EKS cluster with ArgoCD GitOps continuous deployment. Only ArgoCD can deploy to the cluster.
 
 ## Quick Start
 
@@ -12,32 +12,56 @@ terragrunt apply
 # 2. Configure kubectl
 aws eks update-kubeconfig --region us-east-1 --name umgapi-cluster-dev
 
-# 3. Deploy app
-kubectl apply -f deploy/simple-deployment.yaml
+# 3. Install ArgoCD
+bash scripts/install-argocd.sh
 
-# 4. Access app
-kubectl get svc -n app
-# Use the EXTERNAL-IP to access your app
+# 4. Access ArgoCD
+kubectl port-forward -n argocd svc/argocd-server 8080:443 &
+# Open: https://localhost:8080
+# Login: admin / (password from script output)
+
+# 5. ArgoCD will auto-sync your app from the deploy/ folder
 ```
 
 ## Structure
 
 - `app/` - Your containerized application
 - `infra/` - Terraform/Terragrunt infrastructure
-- `deploy/simple-deployment.yaml` - Kubernetes manifest (namespace, deployment, service)
+- `deploy/` - Kubernetes manifests (ArgoCD watches this folder)
+  - `deployment.yaml` - App deployment (namespace, deployment, configmap, service)
+  - `argocd/` - ArgoCD configuration (RBAC, Application manifest)
+- `scripts/install-argocd.sh` - ArgoCD installation script
+
+## How It Works
+
+```
+You push code
+    ↓
+GitHub Actions builds & pushes image to ECR
+    ↓
+You update image tag in deploy/deployment.yaml & push
+    ↓
+ArgoCD detects change in main branch
+    ↓
+ArgoCD (only service account with deploy permission) applies manifests
+    ↓
+App rolls out automatically
+```
+
+**Security:** ArgoCD (`argocd-application-controller`) is the **only** service account allowed to create/update/delete deployments. Direct `kubectl apply` from users is blocked by RBAC.
 
 ## What You Get
 
 - EKS Cluster (1.29) with 2 x t3.medium nodes
+- ArgoCD for GitOps continuous deployment
 - App deployed with LoadBalancer service (external access)
-- ConfigMap for app configuration
-  - Health checks (liveness + readiness)
+- RBAC restricting deployments to ArgoCD only
 
 ## Cleanup
 
 ```bash
-# Delete app
-kubectl delete -f deploy/simple-deployment.yaml
+# Remove ArgoCD
+helm uninstall argocd -n argocd
 
 # Destroy cluster
 cd infra/dev/cluster

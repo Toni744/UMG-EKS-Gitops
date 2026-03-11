@@ -9,8 +9,8 @@ on:
       - '.github/workflows/ci.yaml'
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 014772274523.dkr.ecr.us-east-1.amazonaws.com
+  AWS_REGION: <REGION>
+  ECR_REGISTRY: <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com
   ECR_REPOSITORY: umgapi-app
 
 jobs:

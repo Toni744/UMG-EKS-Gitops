@@ -11,7 +11,7 @@ metadata:
   name: umgapi-sa
   namespace: app
   annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::014772274523:role/umgapi-cluster-dev-app-role
+    eks.amazonaws.com/role-arn: arn:aws:iam::<AWS_ACCOUNT_ID>:role/umgapi-cluster-dev-app-role
 
 ---
 apiVersion: v1
@@ -42,7 +42,7 @@ spec:
       serviceAccountName: umgapi-sa
       containers:
       - name: umgapi-app
-        image: 014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:latest
+        image: <AWS_ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/umgapi-app:latest
         imagePullPolicy: Always
         ports:
         - name: http

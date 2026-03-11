@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Toni744/UMG-EKS-Gitops
+    repoURL: https://github.com/<GITHUB_USERNAME>/<REPO_NAME>
     targetRevision: main
     path: deploy
   destination:

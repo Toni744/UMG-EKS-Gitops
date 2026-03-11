@@ -39,7 +39,7 @@ Then configure AWS:
 
 ```bash
 aws configure
-# Enter: AWS Access Key ID, Secret Access Key, Region (us-east-1), Output format (json)
+# Enter: AWS Access Key ID, Secret Access Key, Region (<REGION>), Output format (json)
 
 # Verify access
 aws sts get-caller-identity
@@ -53,7 +53,7 @@ cd infra/dev/cluster
 terragrunt apply
 
 # 2. Configure kubectl
-aws eks update-kubeconfig --region us-east-1 --name umgapi-cluster-dev
+aws eks update-kubeconfig --region <REGION> --name umgapi-cluster-dev
 
 # 3. Install ArgoCD
 bash scripts/install-argocd.sh

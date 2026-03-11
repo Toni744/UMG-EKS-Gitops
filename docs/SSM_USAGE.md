@@ -12,7 +12,7 @@ from fastapi import FastAPI
 app = FastAPI()
 
 # Initialize SSM client
-ssm = boto3.client('ssm', region_name='us-east-1')
+ssm = boto3.client('ssm', region_name='<REGION>')
 
 
 def get_secret(param_name: str, decrypt: bool = True) -> str:

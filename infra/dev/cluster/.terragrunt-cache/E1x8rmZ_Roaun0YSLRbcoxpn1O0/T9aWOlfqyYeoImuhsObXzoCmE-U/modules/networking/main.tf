@@ -92,6 +92,26 @@ resource "aws_nat_gateway" "main" {
   )
 }
 
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main[0].id
+  }
+
+  tags = merge(
+    var.tags,
+    { Name = "${var.cluster_name}-private-sn" }
+  )
+}
+
+resource "aws_route_table_association" "private" {
+  count          = length(local.azs)
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -102,35 +122,14 @@ resource "aws_route_table" "public" {
 
   tags = merge(
     var.tags,
-    { Name = "${var.cluster_name}-public-rt" }
+    { Name = "${var.cluster_name}-public-sn" }
   )
 }
 
 resource "aws_route_table_association" "public" {
-  count          = length(aws_subnet.public)
+  count          = length(local.azs)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table" "private" {
-  count  = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(data.aws_availability_zones.available.names)) : 0
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main[count.index].id
-  }
-
-  tags = merge(
-    var.tags,
-    { Name = "${var.cluster_name}-private-rt-${count.index + 1}" }
-  )
-}
-
-resource "aws_route_table_association" "private" {
-  count          = var.enable_nat_gateway ? length(aws_subnet.private) : 0
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = var.single_nat_gateway ? aws_route_table.private[0].id : aws_route_table.private[count.index].id
 }
 
 # ── Security Groups for EKS ─────────────────────────────────────────────────

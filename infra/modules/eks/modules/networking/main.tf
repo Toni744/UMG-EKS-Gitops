@@ -102,7 +102,7 @@ resource "aws_route_table" "private" {
 
   tags = merge(
     var.tags,
-    { Name = "${var.cluster_name}-public-rt" }
+    { Name = "${var.cluster_name}-private-sn" }
   )
 }
 
@@ -120,10 +120,9 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
-
   tags = merge(
     var.tags,
-    { Name = "${var.cluster_name}-public-rt-${count.index + 1}" }
+    { Name = "${var.cluster_name}-public-sn" }
   )
 }
 

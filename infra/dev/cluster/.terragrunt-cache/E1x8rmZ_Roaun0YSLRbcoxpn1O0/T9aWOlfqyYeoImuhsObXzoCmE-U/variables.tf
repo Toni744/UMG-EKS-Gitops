@@ -56,6 +56,10 @@ variable "kubernetes_version" {
   default     = "1.32"
 }
 
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
 
 variable "enable_http_put_response_hop_limit" {
   description = "Enable HTTP PUT response hop limit for EC2 metadata"

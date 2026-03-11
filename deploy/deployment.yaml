@@ -6,6 +6,15 @@ metadata:
 
 ---
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: umgapi-sa
+  namespace: app
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::014772274523:role/umgapi-cluster-dev-app-role
+
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
@@ -30,6 +39,7 @@ spec:
       labels:
         app: umgapi-app
     spec:
+      serviceAccountName: umgapi-sa
       containers:
       - name: umgapi-app
         image: 014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:latest

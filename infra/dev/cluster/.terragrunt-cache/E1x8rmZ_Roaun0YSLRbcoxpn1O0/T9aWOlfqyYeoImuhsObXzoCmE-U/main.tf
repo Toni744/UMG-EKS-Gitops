@@ -64,3 +64,15 @@ module "node_group" {
   depends_on = [module.cluster]
 }
 
+module "irsa" {
+  source = "./modules/irsa"
+
+  cluster_name           = var.cluster_name
+  cluster_oidc_issuer_url = module.cluster.cluster_oidc_issuer_url
+  aws_account_id         = data.aws_caller_identity.current.account_id
+  aws_region             = var.aws_region
+  tags                   = local.common_tags
+
+  depends_on = [module.cluster]
+}
+

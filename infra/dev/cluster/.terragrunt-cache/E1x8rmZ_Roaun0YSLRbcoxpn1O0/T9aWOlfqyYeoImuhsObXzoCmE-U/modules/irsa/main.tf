@@ -41,7 +41,7 @@ resource "aws_iam_role" "app_role" {
       }
       Condition = {
         StringEquals = {
-          "${replace(var.cluster_oidc_issuer_url, "https://", "")}:sub" = "system:serviceaccount:umgapi:app-sa"
+          "${replace(var.cluster_oidc_issuer_url, "https://", "")}:sub" = "system:serviceaccount:app:umgapi-sa"
         }
       }
     }]
@@ -50,7 +50,40 @@ resource "aws_iam_role" "app_role" {
   tags = var.tags
 }
 
-# Add application-specific AWS permissions here as needed
+# Policy for SSM Parameter Store access (SecureString parameters)
+resource "aws_iam_role_policy" "app_ssm_policy" {
+  name = "${var.cluster_name}-app-ssm-policy"
+  role = aws_iam_role.app_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters",
+          "ssm:GetParametersByPath"
+        ]
+        Resource = "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/umgapi/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = "arn:aws:kms:${var.aws_region}:${var.aws_account_id}:key/*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "ssm.${var.aws_region}.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Add additional AWS permissions here as needed
 # Example: S3 access, DynamoDB, etc.
 # resource "aws_iam_role_policy_attachment" "app_s3_policy" {
 #   policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"

@@ -91,14 +91,18 @@ ArgoCD (only service account with deploy permission) applies manifests
 App rolls out automatically
 ```
 
-**Security:** ArgoCD (`argocd-application-controller`) is the **only** service account allowed to create/update/delete deployments. Direct `kubectl apply` from users is blocked by RBAC.
+**Security:** 
+- RBAC restricts deployment permissions to ArgoCD service account only
+- Kyverno admission webhook **blocks all kubectl apply** attempts from users
+- Only ArgoCD can create/update/delete deployments
 
 ## What You Get
 
-- EKS Cluster (1.29) with 2 x t3.medium nodes
-- ArgoCD for GitOps continuous deployment
+- EKS Cluster (1.32) with 2 x t3.medium nodes
+- **ArgoCD** for GitOps continuous deployment
+- **Kyverno** admission webhook to enforce deployment policies
 - App deployed with LoadBalancer service (external access)
-- RBAC restricting deployments to ArgoCD only
+- RBAC + Webhook restricting deployments to ArgoCD only
 
 ## Cleanup
 

@@ -1,0 +1,30 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-non-argocd-deployments
+spec:
+  validationFailureAction: Enforce
+  background: false
+  admission: true
+  rules:
+  - name: deny-non-argocd-deployments
+    match:
+      any:
+      - resources:
+          kinds:
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          selector:
+            matchLabels:
+              app: "**"
+    exclude:
+      any:
+      - subjects:
+        - kind: ServiceAccount
+          name: argocd-application-controller
+          namespace: argocd
+    validate:
+      message: "❌ Only ArgoCD is allowed to deploy. Use 'git push' to trigger deployment."
+      pattern:
+        metadata: {}

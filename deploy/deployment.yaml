@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - name: umgapi-app
-        image: 014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:v1.0.0
+        image: 014772274523.dkr.ecr.us-east-1.amazonaws.com/umgapi-app:latest
         imagePullPolicy: Always
         ports:
         - name: http

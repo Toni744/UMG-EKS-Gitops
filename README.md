@@ -1,6 +1,49 @@
 # UMG EKS GitOps - ArgoCD Setup
 
-EKS cluster with ArgoCD GitOps continuous deployment. Only ArgoCD can deploy to the cluster.
+EKS cluster with ArgoCD GitOps continuous deployment.
+
+## Prerequisites
+
+- **AWS Account** with permissions to create EKS, VPC, IAM, and EC2 resources
+- **AWS CLI** - Configure with `aws configure`
+- **kubectl** - Kubernetes command-line tool
+- **Terraform** - Infrastructure as code
+- **Terragrunt** - Terraform wrapper
+- **Docker** - For building container images (if modifying the app)
+- **Git** - For version control and GitHub integration
+
+Install these on Linux:
+
+```bash
+# AWS CLI
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip && sudo ./aws/install
+
+# kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# Terraform
+wget https://releases.hashicorp.com/terraform/1.7.0/terraform_1.7.0_linux_amd64.zip
+unzip terraform_1.7.0_linux_amd64.zip && sudo mv terraform /usr/local/bin/
+
+# Terragrunt
+wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.55.20/terragrunt_linux_amd64
+chmod +x terragrunt_linux_amd64 && sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+
+# Docker
+curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+```
+
+Then configure AWS:
+
+```bash
+aws configure
+# Enter: AWS Access Key ID, Secret Access Key, Region (us-east-1), Output format (json)
+
+# Verify access
+aws sts get-caller-identity
+```
 
 ## Quick Start
 

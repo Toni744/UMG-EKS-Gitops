@@ -98,7 +98,7 @@ App rolls out automatically
 
 ## What You Get
 
-- EKS Cluster (1.32) with 2 x t3.medium nodes
+- EKS Cluster (1.35) with 2 x t3.medium nodes
 - **ArgoCD** for GitOps continuous deployment
 - **Kyverno** admission webhook to enforce deployment policies
 - App deployed with LoadBalancer service (external access)
